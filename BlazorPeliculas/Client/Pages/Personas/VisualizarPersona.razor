@@ -1,0 +1,69 @@
+﻿@page "/persona/{PersonaId:int}"
+@page "/persona/{PersonaId:int}/{NombrePersona}"
+@inject IRepositorio repositorio
+@inject NavigationManager navigationManager
+@inject IMostrarMensajes mostrarMensajes
+
+@if (model == null)
+{
+    <text>Cargando...</text>
+}
+else
+{
+    <h2>@model.Persona.Nombre (@model.Persona.FechaNacimiento.Value.ToString("yyyy"))</h2>
+
+    <text> | </text> <span>@model.Persona.FechaNacimiento.Value.ToString("dd MMM yyyy")</span>
+    
+    <div style="display: flex;">
+        <span style="display: inline-block; margin-right: 5px;"><img src="@model.Persona.Foto" style="width: 225px; height: 315px" /></span>
+       
+    </div>
+    <div style="margin-top: 10px;">
+        <h3>Biografia</h3>
+        <div>
+            <MostrarMarkdown ContenidoMarkdown="@model.Persona.Biografia"></MostrarMarkdown>
+        </div>
+    </div>
+    <div style="margin-top: 10px;">
+        <h3>Peliculas en las que actuó</h3>
+        <div style="display: flex; flex-direction: column">
+            @foreach (var Pelicula in model.Peliculas)
+            {
+                <div style="margin-bottom: 2px;">
+                    <img style="width: 50px;" src="@Pelicula.Poster" />
+                    <span style="display:inline-block;width: 200px;"><a href="/pelicula/@Pelicula.Id/@Pelicula.Titulo.Replace(" ", "-")">@Pelicula.Titulo</a></span>
+                    <span style="display:inline-block; width: 45px;">...</span>
+                    <span>@Pelicula.Lanzamiento</span>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int PersonaId { get; set; }
+    [Parameter] public string NombrePersona { get; set; }
+    private PersonaVisualizarDTO model;
+   
+
+    protected async override Task OnInitializedAsync()
+    {
+        var responseHttp = await repositorio.Get<PersonaVisualizarDTO>($"api/personas/{PersonaId}");
+        if (responseHttp.Error)
+        {
+            if (responseHttp.HttpResponseMessage.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                navigationManager.NavigateTo("");
+            }
+            else
+            {
+                var mensajeError = await responseHttp.GetBody();
+                await mostrarMensajes.MostrarMensajeError(mensajeError);
+            }
+        }
+        else
+        {
+            model = responseHttp.Response;
+        }
+    }
+}
